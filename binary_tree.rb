@@ -9,25 +9,7 @@ class TreeNode
     self.children = []
   end
 
-  def left
-    self.children[0]
-  end
 
-  def right
-    self.children[1]
-  end
-
-  def left=(child_node)
-    self.children[0].parent = nil if !self.children[0].nil?
-    self.children[0] = child_node
-    child_node.parent = self
-  end
-
-  def right=(child_node)
-    self.children[1].parent = nil if !self.children[1].nil?
-    self.children[1] = child_node
-    child_node.parent = self
-  end
 
   def dfs(value, &blk)
     blk = Proc.new { |x,y| x == y } unless blk

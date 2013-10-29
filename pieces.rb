@@ -18,6 +18,7 @@ class SlidingPieces < Pieces
   #Queen, Bishop, Rook
 
   def moves(board)
+    self.moves_available = []
     if (self.move_dirs == "both")
       @moves_available += self.diagonal(board)
       @moves_available += self.horizontal_vertical(board)
@@ -118,23 +119,55 @@ class SteppingPieces < Pieces
 end
 
 class Pawn < SteppingPieces
-  diag_pos = [
-    [0,1* (self.color == "white"? 1 : -1)]
-  ]
-  #check if one space vertical is occupied
-  #if it isn't, that's a move, and then check if has_moved
-  #check if diagonals are occupied by an enemy piece
-  #if so, that's an available move, otherwise not
-  if !self.has_moved
-    diag_pos = [
-      [0,2* (self.color == "white"? 1 : -1)]
+
+  def moves(board)
+    self.moves_available = []
+    piece_ahead = true
+    diag_pos = [1* (self.color == "white"? 1 : -1),0]
+    position = self.position.dup
+    position[0] += diag_pos[0]
+    position[1] += diag_pos[1]
+    unless (board[position[0]][position[1]].class.superclass.superclass == Pieces)
+      self.moves_available << position.dup
+      piece_ahead = false
+    end
+
+    diags = [
+      [1* (self.color == "white"? 1 : -1),-1],
+      [1* (self.color == "white"? 1 : -1),1]
     ]
-    #if no piece in either one space vertical or two, then available move
+    diags.each do |pos|
+      position = self.position.dup
+      position[0] += pos[0]
+      position[1] += pos[1]
+      if (board[position[0]][position[1]].class.superclass.superclass == Pieces)
+        self.moves_available << position.dup if board[position[0]][position[1]].color != self.color
+      end
+    end
+     #check if one space vertical is occupied
+    #if it isn't, that's a move, and then check if has_moved
+    #check if diagonals are occupied by an enemy piece
+    #if so, that's an available move, otherwise not
+    if !self.has_moved && !piece_ahead
+      diag_pos = [2* (self.color == "white"? 1 : -1),0]
+      position = self.position.dup
+      position[0] += diag_pos[0]
+      position[1] += diag_pos[1]
+      unless (board[position[0]][position[1]].class.superclass.superclass == Pieces)
+        self.moves_available << position.dup
+      end
+
+      #if no piece in either one space vertical or two, then available move
+    end
+
+    self.moves_available
+  end
 
 end
 
 class Knight < SteppingPieces
-  def moves
+  def moves(board)
+    self.moves_available = []
     diag_pos = [
       [2, 1],
       [1, 2],
@@ -151,7 +184,7 @@ class Knight < SteppingPieces
       position[0] += pos[0]
       position[1] += pos[1]
       unless position[0] > 7 || position[1] > 7 || position[0] < 0 || position[1] < 0
-        self.moves_available << position
+        self.moves_available << position.dup
       end
     end
     self.moves_available #blah
@@ -159,7 +192,8 @@ class Knight < SteppingPieces
 end
 
 class King < SteppingPieces
-  def moves
+  def moves(board)
+    self.moves_available = []
     diag_pos = [
       [0, 1],
       [0, -1],
@@ -176,7 +210,9 @@ class King < SteppingPieces
       position[0] += pos[0]
       position[1] += pos[1]
       unless position[0] > 7 || position[1] > 7 || position[0] < 0 || position[1] < 0
-        self.moves_available << position
+        if (board[position[0]][position[1]].class.superclass.superclass != Pieces || board[position[0]][position[1]].color != self.color)
+          self.moves_available << position.dup
+        end
       end
     end
     self.moves_available

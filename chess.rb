@@ -29,3 +29,4 @@
   #valid moves?
   #eventually make pretty board
   #checked?
+
