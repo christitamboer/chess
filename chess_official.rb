@@ -201,7 +201,8 @@ class Board
 
       p row_arr
     end
-
+    p "-------------------------"
+    p ("a".."h").to_a.reverse
     return nil
   end
 
@@ -241,13 +242,13 @@ class HumanPlayer
     #validate this!
     arr = input.split(" ")
     start_pos = arr[0].split("")
-    start_pos[0] = start_pos[0].ord - "a".ord
+    start_pos[0] = 7 - (start_pos[0].ord - "a".ord)
     start_pos[1] = start_pos[1].to_i - 1
     start_pos[1],start_pos[0] = start_pos
 
     #letter is col
     end_pos = arr[1].split("")
-    end_pos[0] = end_pos[0].ord - "a".ord
+    end_pos[0] = 7 - (end_pos[0].ord - "a".ord)
     end_pos[1] = end_pos[1].to_i - 1
     end_pos[1],end_pos[0] = end_pos
 
