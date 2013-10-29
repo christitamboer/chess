@@ -1,4 +1,5 @@
 require './pieces.rb'
+require 'debugger'
 
 class Game
 
@@ -21,18 +22,18 @@ class Board
 
   def checked?(color) #return true or false
     king_position = []
-    board.each_index do |row|
-      board[row].each_index do |column|
-        king_position = [row,column] if board[row][column].class == King && board[row][column].color == color
+    self.board.each_index do |row|
+      self.board[row].each_index do |column|
+        king_position = [row,column] if self.board[row][column].class == King && self.board[row][column].color == color
       end
     end
     #king_position
     checked = false
-    board.each_index do |row|
-      board[row].each_index do |col|
+    self.board.each_index do |row|
+      self.board[row].each_index do |col|
         #is it a piece of the opposite color
-        unless (board[row][col].nil?)
-          if (board[row][col].color != color)#opposite color
+        unless (self.board[row][col].nil?)
+          if (self.board[row][col].color != color)#opposite color
             checked = true if board[row][col].moves(self.board).include?(king_position)
           end
         end
@@ -47,7 +48,15 @@ class Board
 
   def dup
     b = Board.new
-    b.board = self.board.dd_inject#duplicate
+    b.board = self.board.map do |row|
+      row.map do |col|
+        if (col.class.superclass.superclass == Pieces)
+          col.class.new(col.position.dup,col.color.dup,col.symbol.dup)
+        else
+          nil
+        end
+      end
+    end#duplicate
     b #return the board object
   end
 
@@ -86,7 +95,8 @@ class Board
       end
     end
     #board[2][2] = Pawn.new([2,2],"black","P")#black pawn at 2,2
-    #board[5][2] = Knight.new([5,2],"white","N")#white knight at 5,2
+    board[5][2] = Knight.new([5,2],"white","N")#white knight at 5,2
+    board[5][4] = Knight.new([5,4],"white","N")#white knight at 5,4
 
     board
   end
@@ -116,13 +126,29 @@ class Board
     elsif (!self.board[start_pos[0]][start_pos[1]].moves(self.board).include?(end_pos))
       raise "that piece cannot move to that end position!"
     else
-      board[start_pos[0]][start_pos[1]].position = end_pos
-      board[end_pos[0]][end_pos[1]] = board[start_pos[0]][start_pos[1]].dup
-      board[start_pos[0]][start_pos[1]] = nil
+      self.board[start_pos[0]][start_pos[1]].position = end_pos
+      self.board[end_pos[0]][end_pos[1]] = self.board[start_pos[0]][start_pos[1]].dup
+      self.board[start_pos[0]][start_pos[1]] = nil
       #move!!
     end
 
 
+  end
+
+  def checkmate?(color)
+    return false unless self.checked?(color)
+    checkmate = true
+    self.board.each_index do |row|
+      self.board[row].each_index do |col|
+        if (self.board[row][col].class.superclass.superclass == Pieces)
+          if (self.board[row][col].color == color)
+            checkmate = false if self.board[row][col].valid_moves.length > 0
+          end
+        end
+      end
+    end
+
+    checkmate
   end
 
 

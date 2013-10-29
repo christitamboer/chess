@@ -11,20 +11,21 @@ class Pieces
   end
 
   def valid_moves
-    self.moves.select do |move|
-      !move_into_check?(move)
+    #debugger
+    self.moves(@board_obj.board).select do |move|
+      #duplicate piece?
+      p move
+      !self.move_into_check?(move)
     end
+
   end
 
   def move_into_check?(pos) #return true or false
     board_dup = self.board_obj.dup #this is a board object
-    board_dup.move!(self.position,pos)
+    board_dup.move!(self.position, pos)
     board_dup.checked?(self.color)
   end
 
-
-  def moves
-  end
 end
 
 class SlidingPieces < Pieces
