@@ -1,12 +1,25 @@
 
 class Pieces
-  attr_accessor :position, :color, :symbol, :moves_available, :has_moved
+  attr_accessor :position, :color, :symbol, :moves_available, :has_moved, :board_obj
   def initialize(position, color, symbol)
     @position = position
     @color = color
     @symbol = symbol
     @moves_available = []
     @has_moved = false
+    @board_obj = ""
+  end
+
+  def valid_moves
+    self.moves.select do |move|
+      !move_into_check?(move)
+    end
+  end
+
+  def move_into_check?(pos) #return true or false
+    board_dup = self.board_obj.dup #this is a board object
+    board_dup.move!(self.position,pos)
+    board_dup.checked?(self.color)
   end
 
 

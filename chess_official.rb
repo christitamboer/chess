@@ -8,6 +8,15 @@ class Board
   attr_accessor :board
   def initialize
     @board = make_board
+    set_pieces_boards
+  end
+
+  def set_pieces_boards
+    self.board.each do |row|
+      row.each do |col|
+        col.board_obj = self if col.class.superclass.superclass == Pieces
+      end
+    end
   end
 
   def checked?(color) #return true or false
@@ -34,6 +43,12 @@ class Board
     end
 
     checked
+  end
+
+  def dup
+    b = Board.new
+    b.board = self.board.dd_inject#duplicate
+    b #return the board object
   end
 
   def make_board
@@ -71,10 +86,45 @@ class Board
       end
     end
     #board[2][2] = Pawn.new([2,2],"black","P")#black pawn at 2,2
-    board[5][2] = Knight.new([5,2],"white","N")#white knight at 5,2
+    #board[5][2] = Knight.new([5,2],"white","N")#white knight at 5,2
 
     board
   end
+
+  def move(start_pos, end_pos)
+    #is there a piece at start_pos
+    if (self.board[start_pos[0]][start_pos[1]].class.superclass.superclass != Pieces)
+      raise "no piece at the starting position!"
+    elsif (!self.board[start_pos[0]][start_pos[1]].moves(self.board).include?(end_pos))
+      raise "that piece cannot move to that end position!"
+    elsif (!self.board[start_pos[0]][start_pos[1]].valid_moves.include?(end_pos))
+        raise "you will be in check!"
+    else
+      board[start_pos[0]][start_pos[1]].position = end_pos
+      board[end_pos[0]][end_pos[1]] = board[start_pos[0]][start_pos[1]].dup
+      board[start_pos[0]][start_pos[1]] = nil
+      #move!!
+    end
+
+
+  end
+
+  def move!(start_pos, end_pos)
+    #is there a piece at start_pos
+    if (self.board[start_pos[0]][start_pos[1]].class.superclass.superclass != Pieces)
+      raise "no piece at the starting position!"
+    elsif (!self.board[start_pos[0]][start_pos[1]].moves(self.board).include?(end_pos))
+      raise "that piece cannot move to that end position!"
+    else
+      board[start_pos[0]][start_pos[1]].position = end_pos
+      board[end_pos[0]][end_pos[1]] = board[start_pos[0]][start_pos[1]].dup
+      board[start_pos[0]][start_pos[1]] = nil
+      #move!!
+    end
+
+
+  end
+
 
   def pretty_print
     #self.board[row][column].symbol
@@ -91,6 +141,14 @@ class Board
     end
 
     return nil
+  end
+
+end
+
+class Array
+
+  def dd_inject
+    inject([]) { |dup, el| dup << (el.is_a?(Array) ? el.dd_inject : el) }
   end
 
 end
