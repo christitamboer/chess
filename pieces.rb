@@ -11,10 +11,9 @@ class Pieces
   end
 
   def valid_moves
-    #debugger
     self.moves(@board_obj.board).select do |move|
       #duplicate piece?
-      p move
+      #p move
       !self.move_into_check?(move)
     end
 

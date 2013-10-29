@@ -1,7 +1,41 @@
 require './pieces.rb'
-require 'debugger'
+
 
 class Game
+
+  def initialize
+    @board = Board.new
+    @player1 = HumanPlayer.new("white")
+    @player2 = HumanPlayer.new("black")
+  end
+
+  def play
+    players = [@player1, @player2]
+    turn = 0
+    until @board.checkmate?(players[turn%2].color)
+      #display board
+      @board.pretty_print
+      start_end_positions = players[turn%2].play_turn
+      if (@board.board[start_end_positions[0][0]][start_end_positions[0][1]].class.superclass.superclass == Pieces)
+        if (@board.board[start_end_positions[0][0]][start_end_positions[0][1]].color != players[turn%2].color)
+          next
+        end
+      end
+      #verify stuff maybe?
+      #make sure that player1 can't move black pieces, vice versa
+      begin
+        @board.move(start_end_positions[0], start_end_positions[1])
+      rescue StandardError => e
+        puts e.message
+        next
+      end
+      #handle errors maybe?
+      turn += 1
+    end
+    @board.pretty_print
+    puts "#{players[(turn+1)%2].color} wins!"
+  end
+
 
 end
 
@@ -95,8 +129,9 @@ class Board
       end
     end
     #board[2][2] = Pawn.new([2,2],"black","P")#black pawn at 2,2
-    board[5][2] = Knight.new([5,2],"white","N")#white knight at 5,2
-    board[5][4] = Knight.new([5,4],"white","N")#white knight at 5,4
+    #board[3][3] = Queen.new([3,3],"black","Q")#black pawn at 2,2
+    #board[5][2] = Knight.new([5,2],"white","N")#white knight at 5,2
+    #board[5][4] = Knight.new([5,4],"white","N")#white knight at 5,4
 
     board
   end
@@ -112,6 +147,7 @@ class Board
     else
       board[start_pos[0]][start_pos[1]].position = end_pos
       board[end_pos[0]][end_pos[1]] = board[start_pos[0]][start_pos[1]].dup
+      board[end_pos[0]][end_pos[1]].has_moved = true
       board[start_pos[0]][start_pos[1]] = nil
       #move!!
     end
@@ -179,6 +215,43 @@ class Array
 
 end
 
-class Player
+class HumanPlayer
+  attr_accessor :color
+  def initialize(color)
+    @color = color
+  end
+
+  def valid?(input)
+    return false unless input[0] =~ /[a-h]/
+    return false unless input[1] =~ /[1-8]/
+    return false unless input[2] == " "
+    return false unless input[3] =~ /[a-h]/
+    return false unless input[4] =~ /[1-8]/
+    true
+  end
+
+  def play_turn
+    #e2 e4
+    puts "enter valid move eg 'e2 e4' you are #{self.color}"
+    input = gets.chomp
+    until valid?(input)
+      puts "invalid entry, make sure format is like: e2 e4"
+      input = gets.chomp
+    end
+    #validate this!
+    arr = input.split(" ")
+    start_pos = arr[0].split("")
+    start_pos[0] = start_pos[0].ord - "a".ord
+    start_pos[1] = start_pos[1].to_i - 1
+    start_pos[1],start_pos[0] = start_pos
+
+    #letter is col
+    end_pos = arr[1].split("")
+    end_pos[0] = end_pos[0].ord - "a".ord
+    end_pos[1] = end_pos[1].to_i - 1
+    end_pos[1],end_pos[0] = end_pos
+
+    [start_pos,end_pos]
+  end
 
 end
