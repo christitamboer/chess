@@ -1,17 +1,17 @@
 
 class Pieces
   attr_accessor :position, :color, :symbol, :moves_available, :has_moved, :board_obj
-  def initialize(position, color, symbol)
+  def initialize(position, color, symbol, board_obj)
     @position = position
     @color = color
     @symbol = symbol
     @moves_available = []
     @has_moved = false
-    @board_obj = ""
+    @board_obj = board_obj
   end
 
   def valid_moves
-    self.moves(@board_obj.board).select do |move|
+    self.moves.select do |move|
       #duplicate piece?
       #p move
       !self.move_into_check?(move)
@@ -30,7 +30,8 @@ end
 class SlidingPieces < Pieces
   #Queen, Bishop, Rook
 
-  def moves(board)
+  def moves
+    board = self.board_obj.board
     self.moves_available = []
     if (self.move_dirs == "both")
       @moves_available += self.diagonal(board)
@@ -133,7 +134,8 @@ end
 
 class Pawn < SteppingPieces
 
-  def moves(board)
+  def moves
+    board = self.board_obj.board
     self.moves_available = []
     piece_ahead = true
     diag_pos = [1* (self.color == "white"? 1 : -1),0]
@@ -166,10 +168,11 @@ class Pawn < SteppingPieces
       position = self.position.dup
       position[0] += diag_pos[0]
       position[1] += diag_pos[1]
-      unless (board[position[0]][position[1]].class.superclass.superclass == Pieces)
-        self.moves_available << position.dup
+      unless position[0] > 7 || position[1] > 7 || position[0] < 0 || position[1] < 0
+        unless (board[position[0]][position[1]].class.superclass.superclass == Pieces)
+          self.moves_available << position.dup
+        end
       end
-
       #if no piece in either one space vertical or two, then available move
     end
 
@@ -179,7 +182,8 @@ class Pawn < SteppingPieces
 end
 
 class Knight < SteppingPieces
-  def moves(board)
+  def moves
+    board = self.board_obj.board
     self.moves_available = []
     diag_pos = [
       [2, 1],
@@ -205,7 +209,8 @@ class Knight < SteppingPieces
 end
 
 class King < SteppingPieces
-  def moves(board)
+  def moves
+    board = self.board_obj.board
     self.moves_available = []
     diag_pos = [
       [0, 1],

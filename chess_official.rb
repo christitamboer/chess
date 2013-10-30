@@ -8,7 +8,6 @@ class Game
     @board = Board.new
     @player1 = HumanPlayer.new("white")
     @player2 = HumanPlayer.new("black")
-
     @turn = 0
   end
 
@@ -31,6 +30,7 @@ class Game
         @board.move(start_end_positions[0], start_end_positions[1])
       rescue StandardError => e
         puts e.message
+        puts e.backtrace
         next
       end
 
@@ -78,26 +78,29 @@ class Board
     self.board.each_with_index do |row, i|
       next unless i == 0 || i == 7
       row.each do |col|
-        pawn_promoted = true if col.class = Pawn
+        pawn_promoted = true if col.class == Pawn
       end
     end
     pawn_promoted
   end
 
   def replace_pawn(piece_sym)
+    pos = []
     self.board.each_with_index do |row, i|
       next unless i == 0 || i == 7
       row.each_with_index do |col, j|
-        [i,j] if col.class = Pawn
+        pos = [i,j] if col.class == Pawn
       end
     end
     class_hash = {
-      "B" => Bishop
-      "R" => Rook
-      "N" => Knight
+      "B" => Bishop,
+      "R" => Rook,
+      "N" => Knight,
       "Q" => Queen
     }
-    self.board[i][j] = class_hash[piece_sym].new([i,j],board[i][j].color,piece_sym)
+    self.board[pos[0]][pos[1]] = class_hash[piece_sym].new(pos,board[pos[0]][pos[1]].color,piece_sym,self)
+    self.board[pos[0]][pos[1]].board_obj = self
+    #set board_obj for that piece!!!
   end
 
   def track_board
@@ -164,9 +167,9 @@ class Board
     self.board.each_index do |row|
       self.board[row].each_index do |col|
         #is it a piece of the opposite color
-        unless (self.board[row][col].nil?)
+        if (self.board[row][col].class.superclass.superclass == Pieces)
           if (self.board[row][col].color != color)#opposite color
-            checked = true if board[row][col].moves(self.board).include?(king_position)
+            checked = true if self.board[row][col].moves.include?(king_position)
           end
         end
         #check its .moves
@@ -183,7 +186,7 @@ class Board
     b.board = self.board.map do |row|
       row.map do |col|
         if (col.class.superclass.superclass == Pieces)
-          col.class.new(col.position.dup,col.color.dup,col.symbol.dup)
+          col.class.new(col.position.dup,col.color.dup,col.symbol.dup,self)
         else
           nil
         end
@@ -206,24 +209,25 @@ class Board
         if (row == 0 || row == 7)
           if (column == 0 || column == 7)
             #rook
-            board[row][column] = Rook.new([row,column],color,"R")
+            board[row][column] = Rook.new([row,column],color,"R",self)
           elsif (column == 1 || column == 6)
             #knight
-            board[row][column] = Knight.new([row,column],color,"N")
+            board[row][column] = Knight.new([row,column],color,"N",self)
           elsif (column == 2 || column == 5)
             #bishop
-            board[row][column] = Bishop.new([row,column],color,"B")
+            board[row][column] = Bishop.new([row,column],color,"B",self)
           elsif (column == 4)
             #queen
-            board[row][column] = Queen.new([row,column],color,"Q")
+            board[row][column] = Queen.new([row,column],color,"Q",self)
           elsif (column == 3)
             #king
-            board[row][column] = King.new([row,column],color,"K")
+            board[row][column] = King.new([row,column],color,"K",self)
           end
         else
           #all pawns
-          board[row][column] = Pawn.new([row,column],color,"P")
+          board[row][column] = Pawn.new([row,column],color,"P",self)
         end
+
       end
     end
     #board[2][2] = Pawn.new([2,2],"black","P")#black pawn at 2,2
@@ -238,7 +242,7 @@ class Board
     #is there a piece at start_pos
     if (self.board[start_pos[0]][start_pos[1]].class.superclass.superclass != Pieces)
       raise "no piece at the starting position!"
-    elsif (!self.board[start_pos[0]][start_pos[1]].moves(self.board).include?(end_pos))
+    elsif (!self.board[start_pos[0]][start_pos[1]].moves.include?(end_pos))
       raise "that piece cannot move to that end position!"
     elsif (!self.board[start_pos[0]][start_pos[1]].valid_moves.include?(end_pos))
         raise "you will be in check!"
@@ -257,7 +261,7 @@ class Board
     #is there a piece at start_pos
     if (self.board[start_pos[0]][start_pos[1]].class.superclass.superclass != Pieces)
       raise "no piece at the starting position!"
-    elsif (!self.board[start_pos[0]][start_pos[1]].moves(self.board).include?(end_pos))
+    elsif (!self.board[start_pos[0]][start_pos[1]].moves.include?(end_pos))
       raise "that piece cannot move to that end position!"
     else
       self.board[start_pos[0]][start_pos[1]].position = end_pos
@@ -352,7 +356,7 @@ class HumanPlayer
     until ["Q","R","B","N"].include?(input.upcase)
       input = gets.chomp
     end
-    input
+    input.upcase
   end
 
   def valid?(input)
