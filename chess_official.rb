@@ -1,5 +1,5 @@
 require './pieces.rb'
-
+require 'colorize'
 
 class Game
 
@@ -189,20 +189,35 @@ class Board
 
 
   def pretty_print
+    color_translate = {
+      "white" => :red,
+      "black" => :blue
+    }
     #self.board[row][column].symbol
-    self.board.each do |row|
-      row_arr = row.map do |column|
+    self.board.each_with_index do |row,i|
+      print (i+1); print(' ')
+      row_arr = row.each_with_index do |column,j|
+
         if column.class.superclass.superclass == Pieces
-          column.symbol
+          print('['.colorize(color_translate.values[(j+i)%2]));
+           print(column.symbol.colorize(color_translate[column.color]));
+           print (']'.colorize(color_translate.values[(j+i)%2]))
         else
-          " "
+         print('['.colorize(color_translate.values[(j+i)%2]));
+         print(' ');
+         print (']'.colorize(color_translate.values[(j+i)%2]))
         end
       end
-
-      p row_arr
+      puts
+      #p row_arr
     end
-    p "-------------------------"
-    p ("a".."h").to_a.reverse
+    #puts
+    print('  ')
+    ("a".."h").to_a.reverse.each do |letter|
+      print(' '); print(letter); print (' ')
+    end
+    puts
+
     return nil
   end
 
