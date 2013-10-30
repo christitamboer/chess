@@ -16,7 +16,6 @@ class Pieces
       #p move
       !self.move_into_check?(move)
     end
-
   end
 
   def move_into_check?(pos) #return true or false
@@ -24,12 +23,10 @@ class Pieces
     board_dup.move!(self.position, pos)
     board_dup.checked?(self.color)
   end
-
 end
 
 class SlidingPieces < Pieces
   #Queen, Bishop, Rook
-
   def moves
     board = self.board_obj.board
     self.moves_available = []
@@ -40,7 +37,6 @@ class SlidingPieces < Pieces
        @moves_available += self.horizontal_vertical(board)
     else
       @moves_available += self.diagonal(board)
-
     end
 
     @moves_available
@@ -48,32 +44,21 @@ class SlidingPieces < Pieces
 
   def find_avail_moves(board,dir_arr)
     available_moves = []
-
     until dir_arr.empty?
       position = self.position.dup
       diag_next = dir_arr.shift
       loop do
-        #check a single diagonal direction
         position[0] += diag_next[0]
         position[1] += diag_next[1]
-
-        if position[0] > 7 || position[1] > 7 || position[0] < 0 || position[1] < 0
+        break if position[0] > 7 || position[1] > 7 || position[0] < 0 || position[1] < 0
+        if self.board_obj.same_color_piece?(position[0],position[1],self.color)
           break
-        end
-
-        if board[position[0]][position[1]].class.superclass.superclass == Pieces
-
-          if board[position[0]][position[1]].color == self.color
-            break
-          else
-            available_moves << position.dup
-            break
-          end
-
+        elsif self.board_obj.opposite_color_piece?(position[0],position[1],self.color)
+          available_moves << position.dup
+          break
         else
           available_moves << position.dup
         end
-
       end
     end
 
@@ -104,9 +89,7 @@ class SlidingPieces < Pieces
     ]
 
     available_moves = find_avail_moves(board,diag_pos)
-
   end
-
 end
 
 class Queen < SlidingPieces
@@ -129,14 +112,11 @@ end
 
 class SteppingPieces < Pieces
   #Pawn, Knight, King
-
 end
 
 class Pawn < SteppingPieces
-
-  def moves
+  def one_space_ahead
     board = self.board_obj.board
-    self.moves_available = []
     piece_ahead = true
     diag_pos = [1* (self.color == "white"? 1 : -1),0]
     position = self.position.dup
@@ -146,24 +126,25 @@ class Pawn < SteppingPieces
       self.moves_available << position.dup
       piece_ahead = false
     end
+    piece_ahead
+  end
 
-    diags = [
-      [1* (self.color == "white"? 1 : -1),-1],
-      [1* (self.color == "white"? 1 : -1),1]
-    ]
+  def diagonal_options
+    board = self.board_obj.board
+    diags = [[1* (self.color == "white"? 1 : -1),-1], [1* (self.color == "white"? 1 : -1),1]]
     diags.each do |pos|
       position = self.position.dup
       position[0] += pos[0]
       position[1] += pos[1]
-      if (board[position[0]][position[1]].class.superclass.superclass == Pieces)
-        self.moves_available << position.dup if board[position[0]][position[1]].color != self.color
+      if self.board_obj.opposite_color_piece?(position[0],position[1],self.color)
+        self.moves_available << position.dup
       end
     end
-     #check if one space vertical is occupied
-    #if it isn't, that's a move, and then check if has_moved
-    #check if diagonals are occupied by an enemy piece
-    #if so, that's an available move, otherwise not
-    if !self.has_moved && !piece_ahead
+  end
+
+  def two_spaces_ahead
+    board = self.board_obj.board
+    if !self.has_moved
       diag_pos = [2* (self.color == "white"? 1 : -1),0]
       position = self.position.dup
       position[0] += diag_pos[0]
@@ -173,29 +154,25 @@ class Pawn < SteppingPieces
           self.moves_available << position.dup
         end
       end
-      #if no piece in either one space vertical or two, then available move
     end
+  end
+
+  def moves
+    board = self.board_obj.board
+    self.moves_available = []
+    piece_ahead = self.one_space_ahead
+    diagonal_options
+    two_spaces_ahead unless piece_ahead
 
     self.moves_available
   end
-
 end
 
 class Knight < SteppingPieces
   def moves
     board = self.board_obj.board
     self.moves_available = []
-    diag_pos = [
-      [2, 1],
-      [1, 2],
-      [-2, -1],
-      [-1, -2],
-      [-2, 1],
-      [-1, 2],
-      [2, -1],
-      [1, -2]
-    ]
-
+    diag_pos = [[2, 1], [1, 2], [-2, -1], [-1, -2], [-2, 1], [-1, 2], [2, -1], [1, -2]]
     diag_pos.each do |pos|
       position = self.position.dup
       position[0] += pos[0]
@@ -204,7 +181,8 @@ class Knight < SteppingPieces
         self.moves_available << position.dup
       end
     end
-    self.moves_available #blah
+
+    self.moves_available
   end
 end
 
@@ -212,27 +190,18 @@ class King < SteppingPieces
   def moves
     board = self.board_obj.board
     self.moves_available = []
-    diag_pos = [
-      [0, 1],
-      [0, -1],
-      [1, 0],
-      [-1, 0],
-      [-1, -1],
-      [1, 1],
-      [1, -1],
-      [-1, 1]
-    ]
-
+    diag_pos = [[0, 1], [0, -1], [1, 0], [-1, 0], [-1, -1], [1, 1], [1, -1], [-1, 1]]
     diag_pos.each do |pos|
       position = self.position.dup
       position[0] += pos[0]
       position[1] += pos[1]
       unless position[0] > 7 || position[1] > 7 || position[0] < 0 || position[1] < 0
-        if (board[position[0]][position[1]].class.superclass.superclass != Pieces || board[position[0]][position[1]].color != self.color)
+        unless self.board_obj.same_color_piece?(position[0],position[1],self.color)
           self.moves_available << position.dup
         end
       end
     end
+
     self.moves_available
   end
 end

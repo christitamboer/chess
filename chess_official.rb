@@ -11,6 +11,19 @@ class Game
     @turn = 0
   end
 
+  def color_equal?(pos,color)
+    if (@board.board[pos[0][0]][pos[0][1]].class.superclass.superclass == Pieces)
+      if (@board.board[pos[0][0]][pos[0][1]].color != color)
+        return false
+      end
+    end
+    true
+  end
+
+  def try_move
+
+  end
+
   def play
     players = [@player1, @player2]
     turn = @turn
@@ -18,27 +31,19 @@ class Game
       #display board
       @board.pretty_print
       @board.all_boards << @board.track_board
-      start_end_positions = players[turn%2].play_turn
-      if (@board.board[start_end_positions[0][0]][start_end_positions[0][1]].class.superclass.superclass == Pieces)
-        if (@board.board[start_end_positions[0][0]][start_end_positions[0][1]].color != players[turn%2].color)
-          next
-        end
-      end
-      #verify stuff maybe?
-      #make sure that player1 can't move black pieces, vice versa
+      s_e_pos = players[turn%2].play_turn
+      next unless color_equal?(s_e_pos,players[turn%2].color)
       begin
-        @board.move(start_end_positions[0], start_end_positions[1])
+        @board.move(s_e_pos[0], s_e_pos[1])
       rescue StandardError => e
         puts e.message
         puts e.backtrace
         next
       end
-
       if @board.pawn_promoted?
         new_piece = players[turn%2].new_piece
         @board.replace_pawn(new_piece)
       end
-      #handle errors maybe?
       turn += 1
       @turn = turn
     end
@@ -53,8 +58,6 @@ class Game
     file.close
     puts "Game successfully saved!"
   end
-
-
 end
 
 class Board
@@ -81,6 +84,7 @@ class Board
         pawn_promoted = true if col.class == Pawn
       end
     end
+
     pawn_promoted
   end
 
@@ -92,15 +96,10 @@ class Board
         pos = [i,j] if col.class == Pawn
       end
     end
-    class_hash = {
-      "B" => Bishop,
-      "R" => Rook,
-      "N" => Knight,
-      "Q" => Queen
-    }
+    class_hash = {"B" => Bishop, "R" => Rook, "N" => Knight, "Q" => Queen }
+
     self.board[pos[0]][pos[1]] = class_hash[piece_sym].new(pos,board[pos[0]][pos[1]].color,piece_sym,self)
     self.board[pos[0]][pos[1]].board_obj = self
-    #set board_obj for that piece!!!
   end
 
   def track_board
@@ -156,29 +155,39 @@ class Board
   end
 
   def checked?(color) #return true or false
+    king_position = get_king_position(color)
+    checked = false
+    self.board.each_index do |row|
+      self.board[row].each_index do |col|
+        if (opposite_color_piece?(row,col,color))
+          checked = true if self.board[row][col].moves.include?(king_position)
+        end
+      end
+    end
+
+    checked
+  end
+
+  def opposite_color_piece?(row,col,color)
+    #returns false if not a piece or same color
+    if (self.board[row][col].class.superclass.superclass == Pieces)
+      if (self.board[row][col].color != color)
+        return true
+      end
+    end
+
+    false
+  end
+
+  def get_king_position(color)
     king_position = []
     self.board.each_index do |row|
       self.board[row].each_index do |column|
         king_position = [row,column] if self.board[row][column].class == King && self.board[row][column].color == color
       end
     end
-    #king_position
-    checked = false
-    self.board.each_index do |row|
-      self.board[row].each_index do |col|
-        #is it a piece of the opposite color
-        if (self.board[row][col].class.superclass.superclass == Pieces)
-          if (self.board[row][col].color != color)#opposite color
-            checked = true if self.board[row][col].moves.include?(king_position)
-          end
-        end
-        #check its .moves
-        #checked = true if its moves.include?(king_position)
 
-      end
-    end
-
-    checked
+    king_position
   end
 
   def dup
@@ -191,7 +200,8 @@ class Board
           nil
         end
       end
-    end#duplicate
+    end
+
     b #return the board object
   end
 
@@ -205,41 +215,32 @@ class Board
         else
           color = "black"
         end
-
-        if (row == 0 || row == 7)
-          if (column == 0 || column == 7)
-            #rook
-            board[row][column] = Rook.new([row,column],color,"R",self)
-          elsif (column == 1 || column == 6)
-            #knight
-            board[row][column] = Knight.new([row,column],color,"N",self)
-          elsif (column == 2 || column == 5)
-            #bishop
-            board[row][column] = Bishop.new([row,column],color,"B",self)
-          elsif (column == 4)
-            #queen
-            board[row][column] = Queen.new([row,column],color,"Q",self)
-          elsif (column == 3)
-            #king
-            board[row][column] = King.new([row,column],color,"K",self)
-          end
-        else
-          #all pawns
-          board[row][column] = Pawn.new([row,column],color,"P",self)
-        end
-
+        piece_maker(board,row,column,color)
       end
     end
-    #board[2][2] = Pawn.new([2,2],"black","P")#black pawn at 2,2
-    #board[3][3] = Queen.new([3,3],"black","Q")#black pawn at 2,2
-    #board[5][2] = Knight.new([5,2],"white","N")#white knight at 5,2
-    #board[5][4] = Knight.new([5,4],"white","N")#white knight at 5,4
 
     board
   end
 
+  def piece_maker(board,row,column,color)
+    if (row == 0 || row == 7)
+      if (column == 0 || column == 7) #rook
+        board[row][column] = Rook.new([row,column],color,"R",self)
+      elsif (column == 1 || column == 6) #knight
+        board[row][column] = Knight.new([row,column],color,"N",self)
+      elsif (column == 2 || column == 5) #bishop
+        board[row][column] = Bishop.new([row,column],color,"B",self)
+      elsif (column == 4) #queen
+        board[row][column] = Queen.new([row,column],color,"Q",self)
+      elsif (column == 3) #king
+        board[row][column] = King.new([row,column],color,"K",self)
+      end
+    else   #all pawns
+      board[row][column] = Pawn.new([row,column],color,"P",self)
+    end
+  end
+
   def move(start_pos, end_pos)
-    #is there a piece at start_pos
     if (self.board[start_pos[0]][start_pos[1]].class.superclass.superclass != Pieces)
       raise "no piece at the starting position!"
     elsif (!self.board[start_pos[0]][start_pos[1]].moves.include?(end_pos))
@@ -251,14 +252,10 @@ class Board
       board[end_pos[0]][end_pos[1]] = board[start_pos[0]][start_pos[1]].dup
       board[end_pos[0]][end_pos[1]].has_moved = true
       board[start_pos[0]][start_pos[1]] = nil
-      #move!!
     end
-
-
   end
 
   def move!(start_pos, end_pos)
-    #is there a piece at start_pos
     if (self.board[start_pos[0]][start_pos[1]].class.superclass.superclass != Pieces)
       raise "no piece at the starting position!"
     elsif (!self.board[start_pos[0]][start_pos[1]].moves.include?(end_pos))
@@ -267,10 +264,7 @@ class Board
       self.board[start_pos[0]][start_pos[1]].position = end_pos
       self.board[end_pos[0]][end_pos[1]] = self.board[start_pos[0]][start_pos[1]].dup
       self.board[start_pos[0]][start_pos[1]] = nil
-      #move!!
     end
-
-
   end
 
   def checkmate?(color)
@@ -278,10 +272,8 @@ class Board
     checkmate = true
     self.board.each_index do |row|
       self.board[row].each_index do |col|
-        if (self.board[row][col].class.superclass.superclass == Pieces)
-          if (self.board[row][col].color == color)
-            checkmate = false if self.board[row][col].valid_moves.length > 0
-          end
+        if same_color_piece?(row, col, color)
+          checkmate = false if self.board[row][col].valid_moves.length > 0
         end
       end
     end
@@ -289,59 +281,45 @@ class Board
     checkmate
   end
 
+  def same_color_piece?(row,col,color)
+    if (self.board[row][col].class.superclass.superclass == Pieces)
+      if (self.board[row][col].color == color)
+        return true
+      end
+    end
+
+    false
+  end
 
   def pretty_print
-    color_translate = {
-      "white" => :red,
-      "black" => :green
-    }
-    piece_translate = {
-      "R" => ["\u2656","\u265c"],
-      "B" => ["\u2657","\u265d"],
-      "K" => ["\u2654","\u265a"],
-      "Q" => ["\u2655","\u265b"],
-      "N" => ["\u2658","\u265e"],
-      "P" => ["\u2659","\u265F"]
-    }
-    #self.board[row][column].symbol
+    color_translate = { "white" => :red, "black" => :green }
+    piece_translate = { "R" => ["\u2656","\u265c"],  "B" => ["\u2657","\u265d"],
+       "K" => ["\u2654","\u265a"], "Q" => ["\u2655","\u265b"], "N" => ["\u2658","\u265e"],
+       "P" => ["\u2659","\u265F"] }
     self.board.each_with_index do |row,i|
       print (i+1); print(' ')
       row_arr = row.each_with_index do |column,j|
-
+        bg = color_translate.values[(j+i)%2]
         if column.class.superclass.superclass == Pieces
-          #print('['.colorize(color_translate.values[(j+i)%2]));
-           #print(column.symbol.colorize(color_translate[column.color]));
-           #print (']'.colorize(color_translate.values[(j+i)%2]))
            color_index = color_translate.keys.index(column.color)
-           print(" #{piece_translate[column.symbol][color_index]} ".colorize(:background => color_translate.values[(j+i)%2]))
+           print(" #{piece_translate[column.symbol][color_index]} ".colorize(:background => bg))
         else
-         #print('['.colorize(color_translate.values[(j+i)%2]));
-         #print(' ');
-         #print (']'.colorize(color_translate.values[(j+i)%2]))
-         print("   ".colorize(:background => color_translate.values[(j+i)%2]))
+         print("   ".colorize(:background => bg))
         end
       end
       puts
-      #p row_arr
     end
-    #puts
     print('  ')
-    ("a".."h").to_a.reverse.each do |letter|
-      print(' '); print(letter); print (' ')
-    end
+    ("a".."h").to_a.reverse.each { |letter| print(' '); print(letter); print (' ') }
     puts
-
     return nil
   end
-
 end
 
 class Array
-
   def dd_inject
     inject([]) { |dup, el| dup << (el.is_a?(Array) ? el.dd_inject : el) }
   end
-
 end
 
 class HumanPlayer
@@ -369,21 +347,18 @@ class HumanPlayer
   end
 
   def play_turn
-    #e2 e4
     puts "enter valid move eg 'e2 e4' you are #{self.color}"
     input = gets.chomp
     until valid?(input)
       puts "invalid entry, make sure format is like: e2 e4"
       input = gets.chomp
     end
-    #validate this!
     arr = input.split(" ")
     start_pos = arr[0].split("")
     start_pos[0] = 7 - (start_pos[0].ord - "a".ord)
     start_pos[1] = start_pos[1].to_i - 1
     start_pos[1],start_pos[0] = start_pos
 
-    #letter is col
     end_pos = arr[1].split("")
     end_pos[0] = 7 - (end_pos[0].ord - "a".ord)
     end_pos[1] = end_pos[1].to_i - 1
@@ -391,7 +366,6 @@ class HumanPlayer
 
     [start_pos,end_pos]
   end
-
 end
 
 def load_game
@@ -403,7 +377,6 @@ def load_game
     contents = File.read(input)
     g = YAML::load(contents)
     puts "Game is loaded."
-    #contents.close
   else
     g = Game.new
   end
