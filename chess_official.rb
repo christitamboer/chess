@@ -33,6 +33,11 @@ class Game
         puts e.message
         next
       end
+
+      if @board.pawn_promoted?
+        new_piece = players[turn%2].new_piece
+        @board.replace_pawn(new_piece)
+      end
       #handle errors maybe?
       turn += 1
       @turn = turn
@@ -66,6 +71,33 @@ class Board
         col.board_obj = self if col.class.superclass.superclass == Pieces
       end
     end
+  end
+
+  def pawn_promoted?
+    pawn_promoted = false
+    self.board.each_with_index do |row, i|
+      next unless i == 0 || i == 7
+      row.each do |col|
+        pawn_promoted = true if col.class = Pawn
+      end
+    end
+    pawn_promoted
+  end
+
+  def replace_pawn(piece_sym)
+    self.board.each_with_index do |row, i|
+      next unless i == 0 || i == 7
+      row.each_with_index do |col, j|
+        [i,j] if col.class = Pawn
+      end
+    end
+    class_hash = {
+      "B" => Bishop
+      "R" => Rook
+      "N" => Knight
+      "Q" => Queen
+    }
+    self.board[i][j] = class_hash[piece_sym].new([i,j],board[i][j].color,piece_sym)
   end
 
   def track_board
@@ -312,6 +344,15 @@ class HumanPlayer
   attr_accessor :color
   def initialize(color)
     @color = color
+  end
+
+  def new_piece
+    puts "What piece would you like for your promoted pawn (Q,R,B,N)"
+    input = gets.chomp
+    until ["Q","R","B","N"].include?(input.upcase)
+      input = gets.chomp
+    end
+    input
   end
 
   def valid?(input)
