@@ -20,10 +20,6 @@ class Game
     true
   end
 
-  def try_move
-
-  end
-
   def play
     players = [@player1, @player2]
     turn = @turn
