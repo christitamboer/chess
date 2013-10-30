@@ -1,20 +1,24 @@
 require './pieces.rb'
 require 'colorize'
+require 'yaml'
 
 class Game
-
+  attr_accessor :board
   def initialize
     @board = Board.new
     @player1 = HumanPlayer.new("white")
     @player2 = HumanPlayer.new("black")
+
+    @turn = 0
   end
 
   def play
     players = [@player1, @player2]
-    turn = 0
-    until @board.checkmate?(players[turn%2].color)
+    turn = @turn
+    until @board.game_over?(players[turn%2].color)
       #display board
       @board.pretty_print
+      @board.all_boards << @board.track_board
       start_end_positions = players[turn%2].play_turn
       if (@board.board[start_end_positions[0][0]][start_end_positions[0][1]].class.superclass.superclass == Pieces)
         if (@board.board[start_end_positions[0][0]][start_end_positions[0][1]].color != players[turn%2].color)
@@ -31,19 +35,29 @@ class Game
       end
       #handle errors maybe?
       turn += 1
+      @turn = turn
     end
     @board.pretty_print
     puts "#{players[(turn+1)%2].color} wins!"
+  end
+
+  def save_game
+    serialized = self.to_yaml
+    file = File.open('saved_chess.txt','w+')
+    file.print serialized
+    file.close
+    puts "Game successfully saved!"
   end
 
 
 end
 
 class Board
-  attr_accessor :board
+  attr_accessor :board, :all_boards
   def initialize
     @board = make_board
     set_pieces_boards
+    @all_boards = []
   end
 
   def set_pieces_boards
@@ -52,6 +66,58 @@ class Board
         col.board_obj = self if col.class.superclass.superclass == Pieces
       end
     end
+  end
+
+  def track_board
+    self.board.map do |row|
+      row.map do |col|
+        if col.class.superclass.superclass == Pieces
+          col.symbol
+        else
+          nil
+        end
+      end
+    end
+  end
+
+  def stalemate?(color)
+    return false if self.checked?(color)
+    checkmate = true
+    self.board.each_index do |row|
+      self.board[row].each_index do |col|
+        if (self.board[row][col].class.superclass.superclass == Pieces)
+          if (self.board[row][col].color == color)
+            checkmate = false if self.board[row][col].valid_moves.length > 0
+          end
+        end
+      end
+    end
+
+    checkmate
+  end
+
+  def draw?(color)
+    return true if three_repeat? #checks all boards so far and counts for >= 3 of the current one
+    return true if checkmate_impossible?
+    false
+  end
+
+  def checkmate_impossible?
+    #if there's a rook or queen on the board checkmate is possible (return false)
+    #
+    false
+  end
+
+  def three_repeat?
+    self.all_boards.count(self.track_board) >= 3
+  end
+
+
+  def game_over?(color)
+    return true if self.checkmate?(color)
+    return true if self.stalemate?(color)
+    return true if self.draw?(color)
+    false
   end
 
   def checked?(color) #return true or false
@@ -191,7 +257,15 @@ class Board
   def pretty_print
     color_translate = {
       "white" => :red,
-      "black" => :blue
+      "black" => :green
+    }
+    piece_translate = {
+      "R" => ["\u2656","\u265c"],
+      "B" => ["\u2657","\u265d"],
+      "K" => ["\u2654","\u265a"],
+      "Q" => ["\u2655","\u265b"],
+      "N" => ["\u2658","\u265e"],
+      "P" => ["\u2659","\u265F"]
     }
     #self.board[row][column].symbol
     self.board.each_with_index do |row,i|
@@ -199,13 +273,16 @@ class Board
       row_arr = row.each_with_index do |column,j|
 
         if column.class.superclass.superclass == Pieces
-          print('['.colorize(color_translate.values[(j+i)%2]));
-           print(column.symbol.colorize(color_translate[column.color]));
-           print (']'.colorize(color_translate.values[(j+i)%2]))
+          #print('['.colorize(color_translate.values[(j+i)%2]));
+           #print(column.symbol.colorize(color_translate[column.color]));
+           #print (']'.colorize(color_translate.values[(j+i)%2]))
+           color_index = color_translate.keys.index(column.color)
+           print(" #{piece_translate[column.symbol][color_index]} ".colorize(:background => color_translate.values[(j+i)%2]))
         else
-         print('['.colorize(color_translate.values[(j+i)%2]));
-         print(' ');
-         print (']'.colorize(color_translate.values[(j+i)%2]))
+         #print('['.colorize(color_translate.values[(j+i)%2]));
+         #print(' ');
+         #print (']'.colorize(color_translate.values[(j+i)%2]))
+         print("   ".colorize(:background => color_translate.values[(j+i)%2]))
         end
       end
       puts
@@ -271,3 +348,22 @@ class HumanPlayer
   end
 
 end
+
+def load_game
+  puts "load game? (y/n)"
+  input = gets.chomp
+  if (input == "y")
+    puts "what is the file name?"
+    input = gets.chomp
+    contents = File.read(input)
+    g = YAML::load(contents)
+    puts "Game is loaded."
+    #contents.close
+  else
+    g = Game.new
+  end
+
+  g.play
+end
+
+load_game
